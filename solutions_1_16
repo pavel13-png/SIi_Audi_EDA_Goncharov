@@ -1,0 +1,341 @@
+# -*- coding: utf-8 -*-
+"""
+Набор решений задач 1–16.
+Запуск: python solutions.py taskN   (где N = 1..16)
+"""
+
+import sys
+from collections import defaultdict
+from typing import List, Tuple
+
+
+# ---------- Задание 1. Слияние списков ----------
+# Даны два неубывающих списка. Нужно вернуть их слитый неубывающий список.
+def merge(A: List[int], B: List[int]) -> List[int]:
+    i = j = 0
+    C = []
+    while i < len(A) and j < len(B):
+        if A[i] <= B[j]:
+            C.append(A[i])
+            i += 1
+        else:
+            C.append(B[j])
+            j += 1
+    if i < len(A):
+        C.extend(A[i:])
+    if j < len(B):
+        C.extend(B[j:])
+    return C
+
+
+def task1() -> None:
+    a = list(map(int, sys.stdin.readline().split()))
+    b = list(map(int, sys.stdin.readline().split()))
+    print(*merge(a, b))
+
+
+# ---------- Задание 2. Пересечение множеств (два возрастающих списка) ----------
+def task2() -> None:
+    a = list(map(int, sys.stdin.readline().split()))
+    b = list(map(int, sys.stdin.readline().split()))
+    i = j = 0
+    res = []
+    while i < len(a) and j < len(b):
+        if a[i] == b[j]:
+            res.append(a[i])
+            i += 1
+            j += 1
+        elif a[i] < b[j]:
+            i += 1
+        else:
+            j += 1
+    print(*res)
+
+
+# ---------- Задание 3. Сортировка ----------
+def task3() -> None:
+    data = sys.stdin.read().strip().split()
+    if not data:
+        return
+    n = int(data[0])
+    arr = list(map(int, data[1:1 + n]))
+    arr.sort()
+    print(*arr)
+
+
+# ---------- Задание 4. Обувной магазин ----------
+def task4() -> None:
+    s_line = sys.stdin.readline()
+    sizes_line = sys.stdin.readline()
+    s = int(s_line.strip())
+    sizes = sorted(map(int, sizes_line.split()))
+    cur = s
+    cnt = 0
+    for x in sizes:
+        if x >= cur:
+            cnt += 1
+            cur = x + 3
+    print(cnt)
+
+
+# ---------- Задание 5. Создание архива ----------
+def task5() -> None:
+    data = sys.stdin.read().strip().split()
+    if not data:
+        print(0)
+        return
+    s = int(data[0])
+    n = int(data[1])
+    sizes = list(map(int, data[2:2 + n]))
+    sizes.sort()
+    total = 0
+    cnt = 0
+    for x in sizes:
+        if total + x <= s:
+            total += x
+            cnt += 1
+        else:
+            break
+    print(cnt)
+
+
+# ---------- Задание 6. Гражданская оборона ----------
+def task6() -> None:
+    input_data = sys.stdin.read().strip().split()
+    it = iter(input_data)
+    n = int(next(it))
+    villages = [int(next(it)) for _ in range(n)]
+    m = int(next(it))
+    shelters = [int(next(it)) for _ in range(m)]
+
+    villages_with_idx = sorted([(pos, i) for i, pos in enumerate(villages)])
+    shelters_with_idx = list(enumerate(shelters, start=1))  # (index, position)
+
+    ans = [0] * n
+    j = 0
+    for pos, orig_idx in villages_with_idx:
+        while j + 1 < m and abs(shelters_with_idx[j + 1][1] - pos) <= abs(shelters_with_idx[j][1] - pos):
+            j += 1
+        ans[orig_idx] = shelters_with_idx[j][0]
+    print(*ans)
+
+
+# ---------- Задание 7. Средний балл по классам (из файла input.txt) ----------
+def task7() -> None:
+    sums = {9: 0, 10: 0, 11: 0}
+    cnts = {9: 0, 10: 0, 11: 0}
+    with open('input.txt', 'r', encoding='utf-8') as f:
+        for line in f:
+            parts = line.strip().split()
+            if not parts:
+                continue
+            *fio, cls, mark = parts
+            cls = int(cls)
+            mark = int(mark)
+            if cls in sums:
+                sums[cls] += mark
+                cnts[cls] += 1
+    def avg(c):
+        return 0 if cnts[c] == 0 else sums[c] / cnts[c]
+    out = f"{avg(9):.10g} {avg(10):.10g} {avg(11):.10g}"
+    print(out)
+
+
+# ---------- Задание 8. Отсортировать список участников по алфавиту (файлы) ----------
+def task8() -> None:
+    rows: List[Tuple[str, str, str, str]] = []
+    with open('input.txt', 'r', encoding='utf-8') as f:
+        for line in f:
+            parts = line.rstrip('\n').split()
+            if not parts:
+                continue
+            surname, name, school, score = parts
+            rows.append((surname, name, school, score))
+    rows.sort(key=lambda x: x[0])
+    with open('output.txt', 'w', encoding='utf-8') as out:
+        for s, n, _, sc in rows:
+            out.write(f"{s} {n} {sc}\n")
+
+
+# ---------- Задание 9. Сортировка подсчётом ----------
+def task9() -> None:
+    data = list(map(int, sys.stdin.read().strip().split()))
+    if not data:
+        return
+    n = data[0]
+    arr = data[1:1 + n]
+    cnt = [0] * 101
+    for x in arr:
+        cnt[x] += 1
+    res = []
+    for v in range(101):
+        if cnt[v]:
+            res.extend([v] * cnt[v])
+    print(*res)
+
+
+# ---------- Задание 10. Максимальный балл по классам (из файла input.txt) ----------
+def task10() -> None:
+    best = {9: 0, 10: 0, 11: 0}
+    with open('input.txt', 'r', encoding='utf-8') as f:
+        for line in f:
+            parts = line.strip().split()
+            if not parts:
+                continue
+            *fio, cls, mark = parts
+            cls = int(cls)
+            mark = int(mark)
+            if cls in best and mark > best[cls]:
+                best[cls] = mark
+    print(best[9], best[10], best[11])
+
+
+# ---------- Задание 11. Результаты олимпиады ----------
+def task11() -> None:
+    data = sys.stdin.read().strip().splitlines()
+    if not data:
+        return
+    n = int(data[0])
+    items = []
+    for line in data[1:1 + n]:
+        s, p = line.rsplit(maxsplit=1)
+        items.append((int(p), s))
+    items.sort(reverse=True)  # по убыванию баллов
+    for p, s in items:
+        print(s)
+
+
+# ---------- Задание 12. Количество победителей по классам ----------
+def task12() -> None:
+    max_by_cls = defaultdict(int)
+    cnt_by_cls = defaultdict(int)
+    for line in sys.stdin:
+        parts = line.strip().split()
+        if not parts:
+            continue
+        *fio, cls, mark = parts
+        cls = int(cls)
+        mark = int(mark)
+        if mark > max_by_cls[cls]:
+            max_by_cls[cls] = mark
+            cnt_by_cls[cls] = 1
+        elif mark == max_by_cls[cls]:
+            cnt_by_cls[cls] += 1
+    print(cnt_by_cls[9], cnt_by_cls[10], cnt_by_cls[11])
+
+
+# ---------- Задание 13. Проходной балл (файлы) ----------
+def task13() -> None:
+    with open('input.txt', 'r', encoding='utf-8') as f:
+        lines = [line.rstrip('\n') for line in f if line.strip()]
+    k = int(lines[0])
+    sums = []
+    for line in lines[1:]:
+        parts = line.split()
+        e3 = int(parts[-1])
+        e2 = int(parts[-2])
+        e1 = int(parts[-3])
+        if e1 >= 40 and e2 >= 40 and e3 >= 40:
+            sums.append(e1 + e2 + e3)
+
+    sums.sort(reverse=True)
+    with open('output.txt', 'w', encoding='utf-8') as out:
+        if len(sums) <= k:
+            out.write('0\n')
+            return
+        if sums.count(sums[0]) > k:
+            out.write('1\n')
+            return
+        threshold = sums[k - 1]
+        gt = sum(1 for x in sums if x > threshold)
+        eq = sum(1 for x in sums if x == threshold)
+        if gt < k <= gt + eq:
+            out.write('1\n')
+        else:
+            out.write(str(threshold) + '\n')
+
+
+# ---------- Задание 14. Такси ----------
+def task14() -> None:
+    dists = list(map(int, sys.stdin.readline().split()))
+    rates = list(map(int, sys.stdin.readline().split()))
+    dists.sort()
+    rates.sort(reverse=True)
+    total = sum(x * y for x, y in zip(dists, rates))
+    print(total)
+
+
+# ---------- Задание 15. Семипроцентный барьер ----------
+def _read_parties_and_votes_from_stdin() -> Tuple[List[str], List[str]]:
+    lines = [line.rstrip('\n') for line in sys.stdin]
+    i = 0
+    while i < len(lines) and lines[i].strip() != 'PARTIES:':
+        i += 1
+    i += 1  # после PARTIES:
+    parties = []
+    while i < len(lines) and lines[i].strip() != 'VOTES:':
+        if lines[i].strip():
+            parties.append(lines[i].rstrip('\n'))
+        i += 1
+    i += 1  # после VOTES:
+    votes = [line for line in lines[i:] if line.strip()]
+    return parties, votes
+
+
+def task15() -> None:
+    parties, votes = _read_parties_and_votes_from_stdin()
+    total = len(votes)
+    cnt = defaultdict(int)
+    for v in votes:
+        cnt[v] += 1
+    res = []
+    for p in parties:
+        share = 0.0 if total == 0 else cnt[p] * 100.0 / total
+        if share >= 7.0:
+            res.append(p)
+    print(*res, sep='\n')
+
+
+# ---------- Задание 16. Упорядочить список партий по числу голосов ----------
+def task16() -> None:
+    parties, votes = _read_parties_and_votes_from_stdin()
+    cnt = defaultdict(int)
+    for v in votes:
+        cnt[v] += 1
+    all_names = set(parties) | set(votes)
+    ordered = sorted(all_names, key=lambda name: (-cnt[name], name))
+    print(*ordered, sep='\n')
+
+
+# ---------- Точка входа ----------
+def main():
+    if len(sys.argv) < 2:
+        print("Укажите номер задания: task1 .. task16")
+        return
+    cmd = sys.argv[1].lower()
+    dispatch = {
+        'task1': task1,
+        'task2': task2,
+        'task3': task3,
+        'task4': task4,
+        'task5': task5,
+        'task6': task6,
+        'task7': task7,
+        'task8': task8,
+        'task9': task9,
+        'task10': task10,
+        'task11': task11,
+        'task12': task12,
+        'task13': task13,
+        'task14': task14,
+        'task15': task15,
+        'task16': task16,
+    }
+    if cmd not in dispatch:
+        print("Неизвестная команда")
+        return
+    dispatch[cmd]()
+
+
+if __name__ == '__main__':
+    main()
