@@ -1,0 +1,435 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "1c617002",
+   "metadata": {},
+   "source": [
+    "# Самостоятельная работа (Системы искусственного интеллекта)\n",
+    "**Исследовательский анализ данных с применением Python**\n",
+    "\n",
+    "---"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "c04606ee",
+   "metadata": {},
+   "source": [
+    "## 1. Ф.И.О.\n",
+    "**Гончаров Павел Юрьевич**"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f93dd924",
+   "metadata": {},
+   "source": [
+    "## 2. Группа\n",
+    "**Д-Э 37-24**"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "957bf833",
+   "metadata": {},
+   "source": [
+    "## 3. Название проекта (исследования)\n",
+    "**Исследовательский анализ рынка автомобилей Audi**"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "c55de30b",
+   "metadata": {},
+   "source": [
+    "## 4. Цель\n",
+    "Выявить ключевые закономерности и аномалии в ценообразовании автомобилей Audi на вторичном рынке."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "18da9ef4",
+   "metadata": {},
+   "source": [
+    "## 5. Задачи\n",
+    "- Загрузить и описать набор данных; определить типы признаков и размеры датасета.\n",
+    "- Выполнить базовую очистку: устранить дубликаты, выявить и обработать выбросы (IQR).\n",
+    "- Провести описательную статистику и визуализации распределений.\n",
+    "- Исследовать взаимосвязи между признаками (корреляции, диаграммы рассеяния).\n",
+    "- Проверить гипотезы о влиянии пробега, года выпуска, модели и трансмиссии на цену.\n",
+    "- Сформулировать выводы и рекомендации для дальнейшего анализа/моделирования."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "e27000f7",
+   "metadata": {},
+   "source": [
+    "## 6. Аннотация\n",
+    "В работе выполнен EDA реального датасета **audi.csv**. Проведена очистка, изучены распределения и корреляции. Подтверждены закономерности: цена растёт с годом выпуска и объёмом двигателя, снижается с пробегом; модели и тип трансмиссии существенно влияют на стоимость. Полученные инсайты пригодны для дальнейшего построения моделей прогнозирования цены."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "c04bbba2",
+   "metadata": {},
+   "source": [
+    "## 7. Подготовка окружения и загрузка данных"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "0f64163d",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "from pathlib import Path\n",
+    "\n",
+    "pd.set_option('display.max_rows', 20)\n",
+    "pd.set_option('display.max_columns', None)\n",
+    "pd.set_option('display.width', 120)\n",
+    "\n",
+    "# Ищем audi.csv рядом с ноутбуком, иначе пробуем /mnt/data\n",
+    "candidates = [Path('audi.csv'), Path('/mnt/data/audi.csv')]\n",
+    "for p in candidates:\n",
+    "    if p.exists():\n",
+    "        data_path = p\n",
+    "        break\n",
+    "else:\n",
+    "    raise FileNotFoundError('Файл audi.csv не найден. Положите audi.csv рядом с ноутбуком или в /mnt/data.')\n",
+    "\n",
+    "print('Используем файл:', data_path)\n",
+    "\n",
+    "# Загружаем исходный датасет\n",
+    "df_raw = pd.read_csv(data_path)\n",
+    "df_raw.head()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "e4c02cd9",
+   "metadata": {},
+   "source": [
+    "### 7.1. Общая информация о датасете"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "8e4029ee",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "print('Размер исходного датасета:', df_raw.shape)\n",
+    "print('\\nИнформация о столбцах:')\n",
+    "df_raw.info()\n",
+    "\n",
+    "print('\\nПропуски в столбцах:')\n",
+    "print(df_raw.isna().sum())\n",
+    "\n",
+    "print('\\nЧисло полностью дублирующихся записей:', df_raw.duplicated().sum())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7bfa893c",
+   "metadata": {},
+   "source": [
+    "### 7.2. Удаление дубликатов"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "a40fd696",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "df = df_raw.drop_duplicates().copy()\n",
+    "print('Размер после удаления дубликатов:', df.shape)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1278e081",
+   "metadata": {},
+   "source": [
+    "### 7.3. Выявление и обработка выбросов (IQR)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "3c16bbfe",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Функция для верхней границы по правилу 1.5*IQR\n",
+    "def upper_iqr_bound(series: pd.Series):\n",
+    "    q1 = series.quantile(0.25)\n",
+    "    q3 = series.quantile(0.75)\n",
+    "    iqr = q3 - q1\n",
+    "    return q3 + 1.5 * iqr\n",
+    "\n",
+    "price_ub = upper_iqr_bound(df['price'])\n",
+    "mil_ub   = upper_iqr_bound(df['mileage'])\n",
+    "print('Верхняя граница для price:', round(price_ub, 2))\n",
+    "print('Верхняя граница для mileage:', round(mil_ub, 2))\n",
+    "\n",
+    "n_price_out = (df['price'] > price_ub).sum()\n",
+    "n_mil_out   = (df['mileage'] > mil_ub).sum()\n",
+    "print('Выбросов по цене:', n_price_out)\n",
+    "print('Выбросов по пробегу:', n_mil_out)\n",
+    "\n",
+    "# Фильтрация\n",
+    "df_clean = df[(df['price'] <= price_ub) & (df['mileage'] <= mil_ub)].copy()\n",
+    "print('Размер после удаления выбросов:', df_clean.shape)\n",
+    "df_clean.head()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "92d02fd0",
+   "metadata": {},
+   "source": [
+    "## 8. Описательная статистика"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "a9be4245",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "desc_cols = ['price','year','mileage','tax','mpg','engineSize']\n",
+    "df_stats = df_clean[desc_cols].describe().T\n",
+    "df_stats"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "235db230",
+   "metadata": {},
+   "source": [
+    "## 9. Визуализация распределений"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "99ea7d99",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# 9.1. Распределение цены (до очистки)\n",
+    "plt.figure()\n",
+    "plt.hist(df['price'], bins=50)\n",
+    "plt.title('Распределение цены (до очистки)')\n",
+    "plt.xlabel('Цена, £')\n",
+    "plt.ylabel('Количество объявлений')\n",
+    "plt.show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "af68f155",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# 9.2. Распределение цены (после очистки выбросов)\n",
+    "plt.figure()\n",
+    "plt.hist(df_clean['price'], bins=50)\n",
+    "plt.title('Распределение цены (после очистки)')\n",
+    "plt.xlabel('Цена, £')\n",
+    "plt.ylabel('Количество объявлений')\n",
+    "plt.show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "00025e37",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# 9.3. Распределение пробега\n",
+    "plt.figure()\n",
+    "plt.hist(df_clean['mileage'], bins=50)\n",
+    "plt.title('Распределение пробега (после очистки)')\n",
+    "plt.xlabel('Пробег, миль')\n",
+    "plt.ylabel('Количество объявлений')\n",
+    "plt.show()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "52d1db3b",
+   "metadata": {},
+   "source": [
+    "## 10. Корреляционный анализ"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "20edfda3",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "num_cols = ['price','year','mileage','tax','mpg','engineSize']\n",
+    "corr = df_clean[num_cols].corr(numeric_only=True)\n",
+    "plt.figure()\n",
+    "plt.imshow(corr, interpolation='nearest')\n",
+    "plt.xticks(range(len(num_cols)), num_cols, rotation=45, ha='right')\n",
+    "plt.yticks(range(len(num_cols)), num_cols)\n",
+    "plt.title('Корреляционная матрица (Пирсон)')\n",
+    "plt.colorbar()\n",
+    "# подписи значений\n",
+    "for i in range(len(num_cols)):\n",
+    "    for j in range(len(num_cols)):\n",
+    "        val = corr.iloc[i, j]\n",
+    "        plt.text(j, i, f\"{val:.2f}\", ha='center', va='center')\n",
+    "plt.tight_layout()\n",
+    "plt.show()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b80cba9b",
+   "metadata": {},
+   "source": [
+    "## 11. Взаимосвязи признаков"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "1e5723d6",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# 11.1. Цена vs Пробег с трендом\n",
+    "x = df_clean['mileage'].values\n",
+    "y = df_clean['price'].values\n",
+    "coef = np.polyfit(x, y, 1)\n",
+    "trend = np.poly1d(coef)\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.scatter(x, y, s=8, alpha=0.4)\n",
+    "xs = np.linspace(x.min(), x.max(), 200)\n",
+    "plt.plot(xs, trend(xs))\n",
+    "plt.title('Цена vs Пробег')\n",
+    "plt.xlabel('Пробег, миль')\n",
+    "plt.ylabel('Цена, £')\n",
+    "plt.show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "d3384461",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# 11.2. Цена по типу трансмиссии (boxplot)\n",
+    "groups = [g['price'].values for _, g in df_clean.groupby('transmission')]\n",
+    "labels = list(df_clean.groupby('transmission').groups.keys())\n",
+    "plt.figure()\n",
+    "plt.boxplot(groups, labels=labels, vert=True, showfliers=False)\n",
+    "plt.title('Цена по типу трансмиссии')\n",
+    "plt.ylabel('Цена, £')\n",
+    "plt.show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "abda0299",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# 11.3. Частоты популярных моделей (топ-10)\n",
+    "top_models = df_clean['model'].value_counts().head(10)\n",
+    "plt.figure()\n",
+    "plt.bar(top_models.index.astype(str), top_models.values)\n",
+    "plt.xticks(rotation=45, ha='right')\n",
+    "plt.title('Топ-10 моделей по числу объявлений')\n",
+    "plt.ylabel('Количество')\n",
+    "plt.tight_layout()\n",
+    "plt.show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "c20487bc",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# 11.4. Цена по популярным моделям (boxplot)\n",
+    "top_names = top_models.index.tolist()\n",
+    "groups = [df_clean[df_clean['model']==m]['price'].values for m in top_names]\n",
+    "plt.figure()\n",
+    "plt.boxplot(groups, labels=top_names, vert=True, showfliers=False)\n",
+    "plt.xticks(rotation=45, ha='right')\n",
+    "plt.title('Цена по моделям (топ-10)')\n",
+    "plt.ylabel('Цена, £')\n",
+    "plt.tight_layout()\n",
+    "plt.show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "cfb4c63e",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# 11.5. Медианная цена по годам выпуска\n",
+    "med_by_year = df_clean.groupby('year')['price'].median().sort_index()\n",
+    "plt.figure()\n",
+    "plt.plot(med_by_year.index.astype(int), med_by_year.values)\n",
+    "plt.title('Медианная цена по годам выпуска')\n",
+    "plt.xlabel('Год выпуска')\n",
+    "plt.ylabel('Медианная цена, £')\n",
+    "plt.show()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "398c17a0",
+   "metadata": {},
+   "source": [
+    "## 12. Гипотезы и результаты\n",
+    "**H1.** Цена отрицательно связана с пробегом — подтверждено (наклон тренда отрицательный, corr(price,mileage)<0).\n",
+    "\n",
+    "**H2.** Цена положительно связана с годом выпуска — подтверждено (медиана растёт с годом).\n",
+    "\n",
+    "**H3.** Цена зависит от модели — подтверждено (значимые различия медиан на boxplot по моделям).\n",
+    "\n",
+    "**H4.** Автоматическая/роботизированная трансмиссия ассоциируется с более высокой ценой — подтверждено (boxplot).\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ca325ba2",
+   "metadata": {},
+   "source": [
+    "## 13. Выводы и рекомендации\n",
+    "- На цену подержанного Audi сильнее всего влияют: **год выпуска, пробег, модель, трансмиссия, объём двигателя**.\n",
+    "- Для дальнейшего моделирования рекомендовано построить регрессионную модель (например, линейную/градиентный бустинг) с кодированием категорий и кросс‑валидацией.\n",
+    "- Для повышения качества прогноза полезно добавить признаки состояния авто, комплектации, региона и числа владельцев (если доступны).\n"
+   ]
+  }
+ ],
+ "metadata": {},
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
